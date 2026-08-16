@@ -1,0 +1,31 @@
+# Maintainer: you <you@example.invalid>
+pkgname=splitvpn
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Split-tunneling GUI client for OpenVPN (.ovpn) profiles"
+arch=('any')
+url="https://github.com/example/splitvpn"
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk3' 'openvpn' 'iproute2' 'iptables' 'util-linux' 'polkit')
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
+source=()
+sha256sums=()
+
+# This PKGBUILD is meant to be run from inside a checkout of the project
+# (i.e. `makepkg -si` from the repository root), not from a downloaded
+# tarball, so there is nothing to fetch in source().
+
+build() {
+  cd "$startdir"
+  python -m build --wheel --no-isolation --outdir "$srcdir/dist"
+}
+
+package() {
+  cd "$startdir"
+  python -m installer --destdir="$pkgdir" "$srcdir"/dist/*.whl
+
+  install -Dm644 packaging/splitvpn.desktop \
+    "$pkgdir/usr/share/applications/splitvpn.desktop"
+  install -Dm644 packaging/org.splitvpn.helper.policy \
+    "$pkgdir/usr/share/polkit-1/actions/org.splitvpn.helper.policy"
+}

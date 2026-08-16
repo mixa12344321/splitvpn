@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Split VPN
+Comment=OpenVPN client with per-subnet and per-application split tunneling
+Exec=splitvpn
+Icon=network-vpn
+Terminal=false
+Categories=Network;
