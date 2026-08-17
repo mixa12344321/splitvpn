@@ -15,13 +15,19 @@ binary) does the actual protocol/crypto work; Split VPN parses the `.ovpn`
 file, drives `openvpn` as a subprocess, and manages routing/namespaces
 around it.
 
-> **Development note:** this was written and reviewed without a live Arch
-> Linux / GTK / openvpn environment to run it against (developed on a
-> non-Linux machine). The code has been syntax-checked and reasoned through
-> carefully, but it has **not** been exercised against a real VPN server or
-> network stack yet. Treat the first run as a bring-up: watch the Log tab,
-> check `ip route` / `ip netns` state, and work through the checklist near
-> the bottom of this file before relying on it.
+> **Testing note:** this has been built and exercised end to end on a real
+> Arch Linux system (WSL2) — package built with `makepkg`, installed, and
+> run against a local OpenVPN test server for both split-by-subnet modes
+> and split-by-application (netns) mode, including real traffic crossing
+> the tunnel, disconnect/route-restore, and recovery after a hard `kill -9`
+> of the openvpn process. Three real bugs turned up during that testing and
+> were fixed (see the git log). What's **not** yet been exercised: the GTK
+> GUI itself (WSL2 here had no display server, so only the backend/CLI path
+> was driven directly), a real TLS/certificate-based provider `.ovpn` (only
+> a static-key config was used as the test target), and bare-metal Arch
+> (WSL2's kernel/networking is close to but not identical to bare metal).
+> The checklist near the bottom of this file still covers what to double
+> check on your own machine.
 
 ## How it works
 
@@ -133,8 +139,9 @@ and `polkit` installed system-wide (PyGObject binds to the system GTK).
 
 ## Before you trust it with real traffic — a checklist
 
-Since this hasn't been run against a live Arch box yet, work through this
-once after installing:
+The backend has been verified against a local test server (see the testing
+note above), but not against your actual VPN provider or the GUI itself.
+Work through this once after installing:
 
 - [ ] Import a real `.ovpn` and confirm **Full tunnel** mode connects and
       `curl ifconfig.me` (or similar) shows the VPN's exit IP.
