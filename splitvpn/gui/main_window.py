@@ -25,6 +25,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self._build_ui()
         self._refresh_profile_list()
+        self.show_all()
         GLib.timeout_add(1000, self._tick)
 
     # ------------------------------------------------------------- build --
