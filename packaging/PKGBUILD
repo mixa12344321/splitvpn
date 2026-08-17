@@ -11,17 +11,25 @@ makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools
 source=()
 sha256sums=()
 
-# This PKGBUILD is meant to be run from inside a checkout of the project
-# (i.e. `makepkg -si` from the repository root), not from a downloaded
-# tarball, so there is nothing to fetch in source().
+# This PKGBUILD lives in packaging/ but builds the project one directory
+# up, so it works whether makepkg is invoked from the repository root or
+# from inside packaging/ itself (there is nothing to fetch in source() --
+# it always builds from this checkout, never a downloaded tarball).
+_rootdir() {
+  if [ -f "$startdir/pyproject.toml" ]; then
+    echo "$startdir"
+  else
+    echo "$startdir/.."
+  fi
+}
 
 build() {
-  cd "$startdir"
+  cd "$(_rootdir)"
   python -m build --wheel --no-isolation --outdir "$srcdir/dist"
 }
 
 package() {
-  cd "$startdir"
+  cd "$(_rootdir)"
   python -m installer --destdir="$pkgdir" "$srcdir"/dist/*.whl
 
   install -Dm644 packaging/splitvpn.desktop \

@@ -81,8 +81,12 @@ def cmd_connect(args: argparse.Namespace) -> int:
         shutil.copy(args.auth_file, auth_file)
         auth_file.chmod(0o600)
 
-    up_hook = f"splitvpn-helper _up-hook --session {session}"
-    down_hook = f"splitvpn-helper _down-hook --session {session}"
+    # script-security 2 (deliberately not 3) means openvpn execve()s this
+    # directly rather than going through a shell, so $PATH is not searched
+    # -- the up/down command needs to be an absolute path.
+    helper_path = shutil.which("splitvpn-helper") or os.path.realpath(sys.argv[0])
+    up_hook = f"{helper_path} _up-hook --session {session}"
+    down_hook = f"{helper_path} _down-hook --session {session}"
     route_noexec = mode == "routes"
 
     if mode == "netns":
@@ -145,7 +149,10 @@ def cmd_up_hook(args: argparse.Namespace) -> int:
     rules = json.loads((state.dir / "rules.json").read_text())
 
     state.tun_dev = os.environ.get("dev")
-    state.route_vpn_gateway = os.environ.get("route_vpn_gateway")
+    # route_vpn_gateway isn't populated for classic point-to-point (net30)
+    # tun setups without --topology subnet; ifconfig_remote (the peer's tun
+    # address) is the correct via-address to fall back to in that case.
+    state.route_vpn_gateway = os.environ.get("route_vpn_gateway") or os.environ.get("ifconfig_remote")
     state.trusted_ip = os.environ.get("trusted_ip")
     state.save()
 
@@ -286,12 +293,18 @@ def build_parser() -> argparse.ArgumentParser:
     ra.add_argument("command", nargs=argparse.REMAINDER)
     ra.set_defaults(func=cmd_run_app)
 
+    # openvpn always appends positional args to --up/--down scripts (dev,
+    # tun-mtu, link-mtu, ifconfig_local, ifconfig_remote, "init"/"restart");
+    # we read everything we need from the environment instead, but still
+    # need to accept and ignore whatever openvpn tacks on.
     uh = sub.add_parser("_up-hook")
     uh.add_argument("--session", required=True)
+    uh.add_argument("openvpn_args", nargs="*")
     uh.set_defaults(func=cmd_up_hook)
 
     dh = sub.add_parser("_down-hook")
     dh.add_argument("--session", required=True)
+    dh.add_argument("openvpn_args", nargs="*")
     dh.set_defaults(func=cmd_down_hook)
 
     return p

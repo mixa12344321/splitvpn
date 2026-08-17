@@ -4,6 +4,8 @@ through it. Runs inside the openvpn --up/--down hooks, as root.
 """
 from __future__ import annotations
 
+import ipaddress
+
 from . import ip_utils
 from .state import SessionState
 
@@ -42,7 +44,18 @@ def apply_split_routes(state: SessionState, rules: dict) -> None:
         ip_utils.route_replace("default", via=gw, dev=dev)
         state.added_routes.append("default")
         if orig:
+            orig_gw_addr = ipaddress.ip_address(orig["gateway"])
             for cidr in cidrs:
+                if orig_gw_addr in ipaddress.ip_network(cidr):
+                    # This CIDR contains the machine's own default gateway,
+                    # i.e. it's the locally-connected subnet. It already
+                    # has a kernel-managed on-link route with no gateway of
+                    # its own; replacing that with an explicit
+                    # via-<gateway> route would both be redundant and, on
+                    # disconnect, leave nothing on-link to resolve that
+                    # gateway through -- which breaks restoring the
+                    # original default route. Leave it untouched.
+                    continue
                 ip_utils.route_replace(cidr, via=orig["gateway"], dev=orig["dev"])
                 state.added_routes.append(cidr)
     else:
@@ -54,11 +67,17 @@ def apply_split_routes(state: SessionState, rules: dict) -> None:
 
 def teardown_split_routes(state: SessionState) -> None:
     orig = state.orig_default
-    for cidr in reversed(state.added_routes):
-        if cidr == "default" and orig:
-            ip_utils.route_replace("default", via=orig["gateway"], dev=orig["dev"])
-        else:
-            ip_utils.route_del(cidr)
+    remaining = list(state.added_routes)
+
+    # Restore "default" first so the original gateway is reachable again
+    # before we start deleting the more specific routes that were keeping
+    # it reachable while the VPN default route was in place.
+    if "default" in remaining and orig:
+        ip_utils.route_replace("default", via=orig["gateway"], dev=orig["dev"])
+        remaining.remove("default")
+
+    for cidr in reversed(remaining):
+        ip_utils.route_del(cidr)
     state.added_routes = []
 
     if state.ipv6_disabled_by_us:
