@@ -11,8 +11,18 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from .. import client, profiles
+from ..i18n import _
 from ..ovpn_parser import parse_ovpn
 from .dialogs import ask_credentials, error_dialog, prompt_add_app
+
+_STATUS_LABELS = {
+    "starting": _("starting"),
+    "connecting": _("connecting"),
+    "connected": _("connected"),
+    "error": _("error"),
+    "disconnected": _("disconnected"),
+    "unknown": _("unknown"),
+}
 
 
 class MainWindow(Gtk.ApplicationWindow):
@@ -36,16 +46,16 @@ class MainWindow(Gtk.ApplicationWindow):
         self.set_titlebar(header)
 
         import_btn = Gtk.Button.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON)
-        import_btn.set_tooltip_text("Import .ovpn profile")
+        import_btn.set_tooltip_text(_("Import .ovpn profile"))
         import_btn.connect("clicked", self._on_import_clicked)
         header.pack_start(import_btn)
 
         self.delete_btn = Gtk.Button.new_from_icon_name("edit-delete-symbolic", Gtk.IconSize.BUTTON)
-        self.delete_btn.set_tooltip_text("Delete profile")
+        self.delete_btn.set_tooltip_text(_("Delete profile"))
         self.delete_btn.connect("clicked", self._on_delete_clicked)
         header.pack_start(self.delete_btn)
 
-        self.connect_btn = Gtk.Button(label="Connect")
+        self.connect_btn = Gtk.Button(label=_("Connect"))
         self.connect_btn.get_style_context().add_class("suggested-action")
         self.connect_btn.connect("clicked", self._on_connect_clicked)
         header.pack_end(self.connect_btn)
@@ -79,10 +89,10 @@ class MainWindow(Gtk.ApplicationWindow):
 
         mode_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         right.pack_start(mode_box, False, False, 6)
-        mode_box.pack_start(Gtk.Label(label="Split-tunnel mode:"), False, False, 0)
-        self.mode_none = Gtk.RadioButton.new_with_label(None, "Full tunnel (no split)")
-        self.mode_routes = Gtk.RadioButton.new_with_label_from_widget(self.mode_none, "Split by IP / subnet")
-        self.mode_netns = Gtk.RadioButton.new_with_label_from_widget(self.mode_none, "Split by application")
+        mode_box.pack_start(Gtk.Label(label=_("Split-tunnel mode:")), False, False, 0)
+        self.mode_none = Gtk.RadioButton.new_with_label(None, _("Full tunnel (no split)"))
+        self.mode_routes = Gtk.RadioButton.new_with_label_from_widget(self.mode_none, _("Split by IP / subnet"))
+        self.mode_netns = Gtk.RadioButton.new_with_label_from_widget(self.mode_none, _("Split by application"))
         for b in (self.mode_none, self.mode_routes, self.mode_netns):
             mode_box.pack_start(b, False, False, 0)
         self._mode_signal_ids = [
@@ -93,9 +103,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.notebook = Gtk.Notebook()
         right.pack_start(self.notebook, True, True, 0)
-        self.notebook.append_page(self._build_routes_tab(), Gtk.Label(label="IP / Subnet rules"))
-        self.notebook.append_page(self._build_apps_tab(), Gtk.Label(label="Applications"))
-        self.notebook.append_page(self._build_log_tab(), Gtk.Label(label="Log"))
+        self.notebook.append_page(self._build_routes_tab(), Gtk.Label(label=_("IP / Subnet rules")))
+        self.notebook.append_page(self._build_apps_tab(), Gtk.Label(label=_("Applications")))
+        self.notebook.append_page(self._build_log_tab(), Gtk.Label(label=_("Log")))
 
         self._set_detail_sensitive(False)
 
@@ -107,10 +117,10 @@ class MainWindow(Gtk.ApplicationWindow):
         box.set_margin_end(8)
 
         mode_row = Gtk.Box(spacing=6)
-        mode_row.pack_start(Gtk.Label(label="Behaviour:"), False, False, 0)
+        mode_row.pack_start(Gtk.Label(label=_("Behaviour:")), False, False, 0)
         self.split_mode_combo = Gtk.ComboBoxText()
-        self.split_mode_combo.append("include_only", "Only listed subnets go through the VPN")
-        self.split_mode_combo.append("exclude_listed", "Everything through the VPN except listed subnets")
+        self.split_mode_combo.append("include_only", _("Only listed subnets go through the VPN"))
+        self.split_mode_combo.append("exclude_listed", _("Everything through the VPN except listed subnets"))
         self.split_mode_combo.set_active_id("include_only")
         self.split_mode_combo.connect("changed", self._on_routes_changed)
         mode_row.pack_start(self.split_mode_combo, True, True, 0)
@@ -123,9 +133,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         add_box = Gtk.Box(spacing=6)
         self.cidr_entry = Gtk.Entry()
-        self.cidr_entry.set_placeholder_text("e.g. 192.168.1.0/24")
+        self.cidr_entry.set_placeholder_text(_("e.g. 192.168.1.0/24"))
         self.cidr_entry.connect("activate", self._on_add_cidr)
-        add_btn = Gtk.Button(label="Add subnet")
+        add_btn = Gtk.Button(label=_("Add subnet"))
         add_btn.connect("clicked", self._on_add_cidr)
         add_box.pack_start(self.cidr_entry, True, True, 0)
         add_box.pack_start(add_btn, False, False, 0)
@@ -141,10 +151,11 @@ class MainWindow(Gtk.ApplicationWindow):
         box.set_margin_end(8)
 
         hint = Gtk.Label(xalign=0)
-        hint.set_markup(
-            "<small>Applications below run inside an isolated network namespace and "
-            "only they use the VPN. Use “Launch” once connected.</small>"
+        hint_text = _(
+            "Applications below run inside an isolated network namespace and "
+            "only they use the VPN. Use “Launch” once connected."
         )
+        hint.set_markup(f"<small>{GLib.markup_escape_text(hint_text)}</small>")
         hint.set_line_wrap(True)
         box.pack_start(hint, False, False, 0)
 
@@ -154,7 +165,7 @@ class MainWindow(Gtk.ApplicationWindow):
         box.pack_start(app_scroll, True, True, 0)
 
         add_box = Gtk.Box(spacing=6)
-        add_btn = Gtk.Button(label="Add application…")
+        add_btn = Gtk.Button(label=_("Add application…"))
         add_btn.connect("clicked", self._on_add_app)
         add_box.pack_start(add_btn, False, False, 0)
         box.pack_start(add_box, False, False, 0)
@@ -206,10 +217,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self.title_label.set_markup(f"<b>{GLib.markup_escape_text(prof.name)}</b>")
         try:
             parsed = parse_ovpn(Path(prof.ovpn_file))
-            remotes = ", ".join(f"{h}:{p}/{proto}" for h, p, proto in parsed.remotes) or "unknown"
-            self.info_label.set_text(f"Remote: {remotes}")
+            remotes = ", ".join(f"{h}:{p}/{proto}" for h, p, proto in parsed.remotes) or _("unknown")
+            self.info_label.set_text(_("Remote: {remotes}").format(remotes=remotes))
         except OSError as exc:
-            self.info_label.set_text(f"Could not read profile: {exc}")
+            self.info_label.set_text(_("Could not read profile: {error}").format(error=exc))
 
         self.mode_none.handler_block(self._mode_signal_ids[0])
         self.mode_routes.handler_block(self._mode_signal_ids[1])
@@ -233,7 +244,7 @@ class MainWindow(Gtk.ApplicationWindow):
                   self.mode_none, self.mode_routes, self.mode_netns, self.connect_btn, self.delete_btn):
             w.set_sensitive(sensitive)
         if not sensitive:
-            self.title_label.set_text("Select or import a profile")
+            self.title_label.set_text(_("Select or import a profile"))
             self.status_label.set_text("")
             self.info_label.set_text("")
 
@@ -278,7 +289,7 @@ class MainWindow(Gtk.ApplicationWindow):
         label = Gtk.Label(label=f"{app['label']}  —  {app['command']}", xalign=0)
         hbox.pack_start(label, True, True, 0)
 
-        launch_btn = Gtk.Button(label="Launch")
+        launch_btn = Gtk.Button(label=_("Launch"))
         launch_btn.connect("clicked", lambda _b, a=app: self._on_launch_app(a))
         hbox.pack_start(launch_btn, False, False, 0)
 
@@ -319,7 +330,7 @@ class MainWindow(Gtk.ApplicationWindow):
         try:
             normalized = str(ipaddress.ip_network(text, strict=False))
         except ValueError as exc:
-            error_dialog(self, f"‘{text}’ is not a valid network: {exc}")
+            error_dialog(self, _("‘{text}’ is not a valid network: {error}").format(text=text, error=exc))
             return
         if normalized not in self.current_profile.cidrs:
             self.current_profile.cidrs.append(normalized)
@@ -356,7 +367,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _on_launch_app(self, app: dict) -> None:
         if not self.current_session:
-            error_dialog(self, "Connect first, then launch applications into the tunnel.")
+            error_dialog(self, _("Connect first, then launch applications into the tunnel."))
             return
         try:
             command = shlex.split(app["command"])
@@ -368,11 +379,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _on_import_clicked(self, _widget) -> None:
         dialog = Gtk.FileChooserDialog(
-            title="Import OpenVPN profile", transient_for=self, action=Gtk.FileChooserAction.OPEN,
+            title=_("Import OpenVPN profile"), transient_for=self, action=Gtk.FileChooserAction.OPEN,
         )
-        dialog.add_buttons("_Cancel", Gtk.ResponseType.CANCEL, "_Open", Gtk.ResponseType.OK)
+        dialog.add_buttons(_("_Cancel"), Gtk.ResponseType.CANCEL, _("_Open"), Gtk.ResponseType.OK)
         filt = Gtk.FileFilter()
-        filt.set_name("OpenVPN config (*.ovpn)")
+        filt.set_name(_("OpenVPN config (*.ovpn)"))
         filt.add_pattern("*.ovpn")
         dialog.add_filter(filt)
 
@@ -381,7 +392,7 @@ class MainWindow(Gtk.ApplicationWindow):
             try:
                 prof = profiles.import_ovpn(path)
             except OSError as exc:
-                error_dialog(self, f"Could not import {path.name}: {exc}")
+                error_dialog(self, _("Could not import {name}: {error}").format(name=path.name, error=exc))
             else:
                 self._refresh_profile_list(select_id=prof.id)
         dialog.destroy()
@@ -391,7 +402,8 @@ class MainWindow(Gtk.ApplicationWindow):
             return
         confirm = Gtk.MessageDialog(
             transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO, text=f"Delete profile “{self.current_profile.name}”?",
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=_("Delete profile “{name}”?").format(name=self.current_profile.name),
         )
         response = confirm.run()
         confirm.destroy()
@@ -429,7 +441,7 @@ class MainWindow(Gtk.ApplicationWindow):
         }
 
         self.connect_btn.set_sensitive(False)
-        self.status_label.set_text("Connecting…")
+        self.status_label.set_text(_("Connecting…"))
         try:
             result = client.connect(Path(prof.ovpn_file), prof.name, rules, username, password)
         except client.HelperError as exc:
@@ -451,7 +463,7 @@ class MainWindow(Gtk.ApplicationWindow):
         finally:
             self.current_session = None
             self.connect_btn.set_sensitive(True)
-            self.status_label.set_text("Disconnected")
+            self.status_label.set_text(_("Disconnected"))
 
     # --------------------------------------------------------------- tick --
 
@@ -461,14 +473,14 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _refresh_status_for_current(self) -> None:
         if not self.current_session:
-            self.connect_btn.set_label("Connect")
+            self.connect_btn.set_label(_("Connect"))
             return
 
         state = client.session_status(self.current_session)
         if state is None:
             self.current_session = None
-            self.status_label.set_text("Disconnected")
-            self.connect_btn.set_label("Connect")
+            self.status_label.set_text(_("Disconnected"))
+            self.connect_btn.set_label(_("Connect"))
             return
 
         status = state.get("status", "unknown")
@@ -476,11 +488,13 @@ class MainWindow(Gtk.ApplicationWindow):
         if status in ("connecting", "connected") and pid and not Path(f"/proc/{pid}").exists():
             status = "error"
 
-        text = f"Status: {status}"
+        status_display = _STATUS_LABELS.get(status, status)
         if state.get("error"):
-            text += f" — {state['error']}"
+            text = _("Status: {status} — {error}").format(status=status_display, error=state["error"])
+        else:
+            text = _("Status: {status}").format(status=status_display)
         self.status_label.set_text(text)
-        self.connect_btn.set_label("Disconnect" if status in ("connecting", "connected") else "Connect")
+        self.connect_btn.set_label(_("Disconnect") if status in ("connecting", "connected") else _("Connect"))
 
         log_text = client.tail_log(self.current_session)
         buf = self.log_view.get_buffer()

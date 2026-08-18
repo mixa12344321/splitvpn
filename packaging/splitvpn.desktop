@@ -2,6 +2,7 @@
 Type=Application
 Name=Split VPN
 Comment=OpenVPN client with per-subnet and per-application split tunneling
+Comment[ru]=Клиент OpenVPN со сплит-туннелированием по подсетям и по приложениям
 Exec=splitvpn
 Icon=network-vpn
 Terminal=false

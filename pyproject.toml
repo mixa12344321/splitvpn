@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "splitvpn"
-version = "0.1.0"
+version = "0.2.0"
 description = "Split-tunneling GUI client for OpenVPN (.ovpn) profiles on Linux"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,3 +17,6 @@ splitvpn-helper = "splitvpn.helper:main"
 
 [tool.setuptools.packages.find]
 include = ["splitvpn*"]
+
+[tool.setuptools.package-data]
+splitvpn = ["locale/*/LC_MESSAGES/*.mo"]

@@ -1,0 +1,225 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the splitvpn package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: splitvpn 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-18 12:48+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: splitvpn/gui/main_window.py:19
+msgid "starting"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:20
+msgid "connecting"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:21
+msgid "connected"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:22
+msgid "error"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:23
+msgid "disconnected"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:24 splitvpn/gui/main_window.py:220
+msgid "unknown"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:49
+msgid "Import .ovpn profile"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:54
+msgid "Delete profile"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:58 splitvpn/gui/main_window.py:476
+#: splitvpn/gui/main_window.py:483 splitvpn/gui/main_window.py:497
+msgid "Connect"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:92
+msgid "Split-tunnel mode:"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:93
+msgid "Full tunnel (no split)"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:94
+msgid "Split by IP / subnet"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:95
+msgid "Split by application"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:106
+msgid "IP / Subnet rules"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:107
+msgid "Applications"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:108
+msgid "Log"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:120
+msgid "Behaviour:"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:122
+msgid "Only listed subnets go through the VPN"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:123
+msgid "Everything through the VPN except listed subnets"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:136
+msgid "e.g. 192.168.1.0/24"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:138
+msgid "Add subnet"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:155
+msgid ""
+"Applications below run inside an isolated network namespace and only they "
+"use the VPN. Use “Launch” once connected."
+msgstr ""
+
+#: splitvpn/gui/main_window.py:168
+msgid "Add application…"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:221
+#, python-brace-format
+msgid "Remote: {remotes}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:223
+#, python-brace-format
+msgid "Could not read profile: {error}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:247
+msgid "Select or import a profile"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:292
+msgid "Launch"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:333
+#, python-brace-format
+msgid "‘{text}’ is not a valid network: {error}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:370
+msgid "Connect first, then launch applications into the tunnel."
+msgstr ""
+
+#: splitvpn/gui/main_window.py:382
+msgid "Import OpenVPN profile"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:384 splitvpn/gui/dialogs.py:31
+#: splitvpn/gui/dialogs.py:64
+msgid "_Cancel"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:384
+msgid "_Open"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:386
+msgid "OpenVPN config (*.ovpn)"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:395
+#, python-brace-format
+msgid "Could not import {name}: {error}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:406
+#, python-brace-format
+msgid "Delete profile “{name}”?"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:444
+msgid "Connecting…"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:466 splitvpn/gui/main_window.py:482
+msgid "Disconnected"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:493
+#, python-brace-format
+msgid "Status: {status} — {error}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:495
+#, python-brace-format
+msgid "Status: {status}"
+msgstr ""
+
+#: splitvpn/gui/main_window.py:497
+msgid "Disconnect"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:30
+msgid "VPN credentials"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:31
+msgid "_Connect"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:40
+msgid "Username:"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:44
+msgid "Password:"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:63
+msgid "Add application"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:64
+msgid "_Add"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:74
+msgid "Name:"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:79
+msgid "Command:"
+msgstr ""
+
+#: splitvpn/gui/dialogs.py:93
+msgid "Pick installed app…"
+msgstr ""

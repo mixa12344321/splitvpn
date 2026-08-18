@@ -1,10 +1,10 @@
 # Maintainer: you <you@example.invalid>
 pkgname=splitvpn
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Split-tunneling GUI client for OpenVPN (.ovpn) profiles"
 arch=('any')
-url="https://github.com/example/splitvpn"
+url="https://github.com/mixa12344321/splitvpn"
 license=('MIT')
 depends=('python' 'python-gobject' 'gtk3' 'openvpn' 'iproute2' 'iptables' 'util-linux' 'polkit')
 makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
@@ -36,4 +36,9 @@ package() {
     "$pkgdir/usr/share/applications/splitvpn.desktop"
   install -Dm644 packaging/org.splitvpn.helper.policy \
     "$pkgdir/usr/share/polkit-1/actions/org.splitvpn.helper.policy"
+
+  # Also installed system-wide (the wheel already bundles it too, which is
+  # what splitvpn/i18n.py actually looks at first at runtime).
+  install -Dm644 splitvpn/locale/ru/LC_MESSAGES/splitvpn.mo \
+    "$pkgdir/usr/share/locale/ru/LC_MESSAGES/splitvpn.mo"
 }
