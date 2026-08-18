@@ -1,5 +1,7 @@
 # Split VPN
 
+[Русская версия](README.ru.md)
+
 A GTK3 OpenVPN client for Linux (built and packaged for Arch) that imports
 `.ovpn` profiles and supports two kinds of split tunneling:
 
