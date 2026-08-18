@@ -1,21 +1,33 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Split VPN is pre-1.0 software. Only the latest release on the `main`
+branch is supported — please update before reporting an issue.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 0.2.x   | ✅        |
+| < 0.2   | ❌        |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Use this section to tell people how to report a vulnerability.
+`splitvpn-helper` runs as root and drives `ip`, `iptables`, `ip netns`,
+and `openvpn` directly, so security issues here can have real impact —
+please report them responsibly rather than opening a public issue.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Open a [GitHub Security Advisory](https://github.com/mixa12344321/splitvpn/security/advisories/new)
+for this repository, or open a regular issue if you'd prefer public
+disclosure and the issue isn't sensitive (e.g. a hardening suggestion
+rather than an exploitable bug).
+
+Please include:
+
+- The affected version/commit.
+- Steps to reproduce, or a description of the flaw if reproduction steps
+  aren't practical to share.
+- The potential impact as you see it (e.g. privilege escalation via the
+  helper, a routing/namespace bug that leaks traffic outside the VPN).
+
+There's no fixed SLA (this is a small side project), but reports will be
+acknowledged and addressed as a priority over regular feature work.
