@@ -9,19 +9,16 @@ import subprocess
 
 log = logging.getLogger("splitvpn.ip_utils")
 
-# run() is only ever called (directly or via netns_exec) with these network
-# utilities -- never with openvpn or anything that takes a credential as a
-# CLI argument. Gating full-argument logging/error messages behind this
-# allowlist means a future call site accidentally passing sensitive data
-# through this generic wrapper gets its arguments redacted by default
-# instead of landing in a debug log or an error message shown to the user.
-_SAFE_TO_LOG_PROGRAMS = {"ip", "iptables", "sysctl"}
-
-
-def _display(cmd: list[str]) -> str:
-    if cmd and cmd[0] in _SAFE_TO_LOG_PROGRAMS:
-        return " ".join(cmd)
-    return f"{cmd[0]} [{len(cmd) - 1} arg(s) redacted]" if cmd else "<empty command>"
+# run() is a generic subprocess wrapper reused for every `ip`/`iptables`/
+# `sysctl` call the helper makes. No argument *value* from cmd is ever
+# included in a log message or error string -- only the program name and
+# an argument count -- so a future call site can't accidentally leak
+# sensitive data through this function's debug/error output, and nobody
+# needs to prove per-call-site that nothing sensitive is passed in. The
+# command's own stderr (never derived from our input) is still surfaced
+# in full for actual troubleshooting.
+def _program_name(cmd: list[str]) -> str:
+    return cmd[0] if cmd else "<empty command>"
 
 
 class CommandError(RuntimeError):
@@ -29,11 +26,11 @@ class CommandError(RuntimeError):
         self.cmd = cmd
         self.returncode = returncode
         self.stderr = stderr
-        super().__init__(f"{_display(cmd)} failed ({returncode}): {stderr.strip()}")
+        super().__init__(f"{_program_name(cmd)} failed ({returncode}): {stderr.strip()}")
 
 
 def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
-    log.debug("+ %s", _display(cmd))
+    log.debug("+ %s (%d arg(s))", _program_name(cmd), max(len(cmd) - 1, 0))
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if check and proc.returncode != 0:
         raise CommandError(cmd, proc.returncode, proc.stderr)
