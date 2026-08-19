@@ -9,17 +9,31 @@ import subprocess
 
 log = logging.getLogger("splitvpn.ip_utils")
 
+# run() is only ever called (directly or via netns_exec) with these network
+# utilities -- never with openvpn or anything that takes a credential as a
+# CLI argument. Gating full-argument logging/error messages behind this
+# allowlist means a future call site accidentally passing sensitive data
+# through this generic wrapper gets its arguments redacted by default
+# instead of landing in a debug log or an error message shown to the user.
+_SAFE_TO_LOG_PROGRAMS = {"ip", "iptables", "sysctl"}
+
+
+def _display(cmd: list[str]) -> str:
+    if cmd and cmd[0] in _SAFE_TO_LOG_PROGRAMS:
+        return " ".join(cmd)
+    return f"{cmd[0]} [{len(cmd) - 1} arg(s) redacted]" if cmd else "<empty command>"
+
 
 class CommandError(RuntimeError):
     def __init__(self, cmd: list[str], returncode: int, stderr: str):
         self.cmd = cmd
         self.returncode = returncode
         self.stderr = stderr
-        super().__init__(f"{' '.join(cmd)} failed ({returncode}): {stderr.strip()}")
+        super().__init__(f"{_display(cmd)} failed ({returncode}): {stderr.strip()}")
 
 
 def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
-    log.debug("+ %s", " ".join(cmd))
+    log.debug("+ %s", _display(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if check and proc.returncode != 0:
         raise CommandError(cmd, proc.returncode, proc.stderr)

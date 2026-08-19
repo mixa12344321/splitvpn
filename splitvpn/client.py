@@ -39,6 +39,17 @@ def _pkexec(args: list[str]) -> dict:
     return data
 
 
+def _private_tmp_dir() -> str | None:
+    """A per-user, mode-0700, tmpfs-backed directory to prefer over the
+    shared world-listable system temp dir for credential material. Set by
+    pam_systemd on essentially every modern Linux desktop session.
+    """
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime_dir and Path(runtime_dir).is_dir():
+        return runtime_dir
+    return None
+
+
 def connect(ovpn_path: Path, name: str, rules: dict,
             username: str | None, password: str | None) -> dict:
     tmp_rules = Path(tempfile.mkstemp(prefix="splitvpn-rules-", suffix=".json")[1])
@@ -48,9 +59,14 @@ def connect(ovpn_path: Path, name: str, rules: dict,
         args = ["connect", "--ovpn", str(ovpn_path), "--name", name, "--rules", str(tmp_rules)]
 
         if username is not None:
-            tmp_auth = Path(tempfile.mkstemp(prefix="splitvpn-auth-", suffix=".txt")[1])
-            tmp_auth.chmod(0o600)
-            tmp_auth.write_text(f"{username}\n{password or ''}\n")
+            # mkstemp() creates the file mode 0600 atomically, so there's
+            # no window where the password is world-readable; using
+            # XDG_RUNTIME_DIR when available additionally keeps the
+            # filename itself out of the shared, world-listable /tmp.
+            fd, path = tempfile.mkstemp(prefix="splitvpn-auth-", suffix=".txt", dir=_private_tmp_dir())
+            tmp_auth = Path(path)
+            with os.fdopen(fd, "w") as fh:
+                fh.write(f"{username}\n{password or ''}\n")
             args += ["--auth-file", str(tmp_auth)]
 
         return _pkexec(args)
