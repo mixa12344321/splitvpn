@@ -1,6 +1,6 @@
 pkgbase = splitvpn
 	pkgdesc = Split-tunneling GUI client for OpenVPN (.ovpn) profiles, by IP/subnet or by application
-	pkgver = 0.2.0
+	pkgver = 0.2.1
 	pkgrel = 1
 	url = https://github.com/mixa12344321/splitvpn
 	arch = any
@@ -17,7 +17,7 @@ pkgbase = splitvpn
 	depends = iptables
 	depends = util-linux
 	depends = polkit
-	source = splitvpn-0.2.0.tar.gz::https://github.com/mixa12344321/splitvpn/archive/refs/tags/v0.2.0.tar.gz
-	sha256sums = b2d99d8666f479317c759993953dff1a12d4661d468cfce887f767c2b1f80094
+	source = splitvpn-0.2.1.tar.gz::https://github.com/mixa12344321/splitvpn/archive/refs/tags/v0.2.1.tar.gz
+	sha256sums = fbb40137886a939388199e25085f248a172a58c322e7023712dd8b12381f9097
 
 pkgname = splitvpn

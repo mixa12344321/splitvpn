@@ -1,6 +1,6 @@
 # Maintainer: mixa12344321 <avya78145@gmail.com>
 pkgname=splitvpn
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc="Split-tunneling GUI client for OpenVPN (.ovpn) profiles, by IP/subnet or by application"
 arch=('any')
@@ -9,7 +9,7 @@ license=('MIT')
 depends=('python' 'python-gobject' 'gtk3' 'openvpn' 'iproute2' 'iptables' 'util-linux' 'polkit')
 makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/mixa12344321/splitvpn/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('b2d99d8666f479317c759993953dff1a12d4661d468cfce887f767c2b1f80094')
+sha256sums=('fbb40137886a939388199e25085f248a172a58c322e7023712dd8b12381f9097')
 
 build() {
   cd "$pkgname-$pkgver"
