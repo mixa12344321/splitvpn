@@ -4,12 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "splitvpn"
-version = "0.2.1"
-description = "Split-tunneling GUI client for OpenVPN (.ovpn) profiles on Linux"
+version = "0.3.0"
+description = "Split-tunneling GUI client for OpenVPN (.ovpn) profiles, for Linux and Windows"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-dependencies = ["PyGObject"]
+dependencies = [
+    "PyGObject",
+    "pydivert; sys_platform == 'win32'",
+    "psutil; sys_platform == 'win32'",
+]
 
 [project.scripts]
 splitvpn = "splitvpn.gui.app:main"

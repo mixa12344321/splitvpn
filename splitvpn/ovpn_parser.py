@@ -8,6 +8,19 @@ from pathlib import Path
 
 _INLINE_TAG_RE = re.compile(r"^<(/?)([\w-]+)>$")
 
+
+def _ovpn_quote(value: str) -> str:
+    """Quote a value for embedding in an openvpn config file's own argument
+    tokenizer -- distinct from, and not to be confused with, shell quoting
+    (script-security 2 execve()s the up/down command directly, bypassing
+    the shell entirely; this only concerns how *openvpn itself* parses the
+    config file). openvpn treats backslash as an escape character in
+    double-quoted config values, so a literal backslash -- ubiquitous in
+    Windows paths -- must be doubled or it silently eats the next
+    character.
+    """
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
 # Directives we always inject ourselves; any existing occurrence in the
 # source profile is stripped before re-adding our own, to avoid ambiguous
 # duplicate options being handed to openvpn.
@@ -127,8 +140,17 @@ def build_launch_config(
 ) -> str:
     """Return the full text of an augmented .ovpn config ready to hand to openvpn.
 
-    ``up_script``/``down_script`` are full command lines (already the final
-    argv string splitvpn wants openvpn to invoke), not paths to write.
+    ``up_script``/``down_script`` must each be a path to a single existing,
+    directly-executable script, with no embedded arguments -- openvpn's
+    ``up``/``down`` config directive takes exactly one parameter (a second
+    quoted token is rejected outright: "the --up directive should have at
+    most 1 parameter"), and on Windows that one value is handed straight
+    to CreateProcess as an executable path with no further word-splitting,
+    so a value like ``"prog arg1 arg2"`` fails there with "file not
+    found" even though it happens to work on Linux via execve(). Anything
+    the script needs to know (which helper binary to invoke, which
+    session) must already be baked into the script itself -- see
+    helper.py's per-session up.cmd/up.sh generation.
     """
     filtered: list[str] = []
     for raw in profile.raw_lines:
@@ -146,8 +168,8 @@ def build_launch_config(
         "",
         "# --- injected by splitvpn ---",
         "script-security 2",
-        f'up "{up_script}"',
-        f'down "{down_script}"',
+        f"up {_ovpn_quote(up_script)}",
+        f"down {_ovpn_quote(down_script)}",
         "up-restart",
     ]
     if route_noexec:
@@ -155,6 +177,6 @@ def build_launch_config(
         extra.append('pull-filter ignore "redirect-gateway"')
         extra.append('pull-filter ignore "route "')
     if auth_file is not None:
-        extra.append(f"auth-user-pass {shlex.quote(str(auth_file))}")
+        extra.append(f"auth-user-pass {_ovpn_quote(str(auth_file))}")
 
     return "\n".join(filtered) + "\n" + "\n".join(extra) + "\n"

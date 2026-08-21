@@ -1,19 +1,25 @@
 """Local storage of imported OpenVPN profiles and their split-tunnel rules.
 
-Everything here runs unprivileged, under ~/.config/splitvpn/.
+Everything here runs unprivileged, under ~/.config/splitvpn/ on Linux or
+%APPDATA%\\splitvpn\\ on Windows.
 """
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
+import sys
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .ovpn_parser import parse_ovpn
 
-CONFIG_DIR = Path.home() / ".config" / "splitvpn"
+if sys.platform == "win32":
+    CONFIG_DIR = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "splitvpn"
+else:
+    CONFIG_DIR = Path.home() / ".config" / "splitvpn"
 PROFILES_DIR = CONFIG_DIR / "profiles"
 
 # Directives that reference a separate file on disk (as opposed to an

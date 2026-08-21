@@ -1,17 +1,27 @@
-"""On-disk state for active splitvpn sessions, stored under /run/splitvpn/<session>/.
+"""On-disk state for active splitvpn sessions.
 
-/run is tmpfs on virtually every distro (including Arch), so state is
-naturally cleared on reboot. state.json is written world-readable so the
-unprivileged GUI can poll status without going through pkexec again.
+On Linux this lives under /run/splitvpn/<session>/ -- tmpfs on virtually
+every distro, cleared on reboot, and state.json is written world-readable
+so the unprivileged GUI can poll status without going through pkexec
+again. On Windows there's no tmpfs equivalent exposed the same way, so we
+use %PROGRAMDATA%\\splitvpn\\run\\<session>\\ instead; files created there by
+the elevated helper inherit ProgramData's default ACL, which already
+grants standard users Read & Execute, giving the same polling-without-
+elevation behavior.
 """
 from __future__ import annotations
 
 import dataclasses
 import json
+import os
+import sys
 import time
 from pathlib import Path
 
-RUN_DIR = Path("/run/splitvpn")
+if sys.platform == "win32":
+    RUN_DIR = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "splitvpn" / "run"
+else:
+    RUN_DIR = Path("/run/splitvpn")
 
 
 @dataclasses.dataclass
@@ -22,6 +32,9 @@ class SessionState:
     status: str = "starting"               # starting|connecting|connected|error|disconnected
     pid: int | None = None
     tun_dev: str | None = None
+    tun_if_index: int | None = None        # Windows: interface index (from openvpn's dev_idx)
+    tun_local_ip: str | None = None        # Windows: tunnel's own local address (ifconfig_local)
+    app_split_daemon_pid: int | None = None  # Windows: process hosting the WinDivert AppSplitEngine
     route_vpn_gateway: str | None = None
     trusted_ip: str | None = None
     orig_default: dict | None = None
@@ -35,6 +48,7 @@ class SessionState:
     ns_addr: str | None = None
     nat_iface: str | None = None
     iptables_rules: list[list[str]] = dataclasses.field(default_factory=list)
+    tracked_pids: list[int] = dataclasses.field(default_factory=list)  # Windows app-split
     error: str | None = None
     created_at: float = dataclasses.field(default_factory=time.time)
     updated_at: float = dataclasses.field(default_factory=time.time)

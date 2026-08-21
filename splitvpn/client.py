@@ -1,27 +1,55 @@
 """Unprivileged helper used by the GUI to talk to the privileged
-splitvpn-helper (via pkexec) and to read session status.
+splitvpn-helper -- via pkexec on Linux, via UAC elevation (win_elevate) on
+Windows -- and to read session status.
 
-Status/log reads never go through pkexec: state.json under /run/splitvpn is
-written world-readable by the root helper specifically so the GUI can poll
-it directly without repeated authentication prompts.
+Status/log reads never go through elevation: state.json under
+RUN_DIR/<session> is written world/standard-user readable by the root
+helper specifically so the GUI can poll it directly without repeated
+authentication prompts (see state.py for why that's true on both
+platforms).
 """
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
+from .state import RUN_DIR
+
 HELPER_BIN = "splitvpn-helper"
-RUN_DIR = Path("/run/splitvpn")
+IS_WINDOWS = sys.platform == "win32"
+
+if IS_WINDOWS:
+    from . import win_elevate
 
 
 class HelperError(RuntimeError):
     pass
 
 
-def _pkexec(args: list[str]) -> dict:
+def _find_helper_exe() -> str:
+    found = shutil.which(HELPER_BIN)
+    if found:
+        return found
+    raise HelperError(
+        f"{HELPER_BIN} was not found on PATH -- is splitvpn installed correctly?"
+    )
+
+
+def _invoke(args: list[str]) -> dict:
+    if IS_WINDOWS:
+        try:
+            data = win_elevate.run_elevated(_find_helper_exe(), args)
+        except win_elevate.ElevationError as exc:
+            raise HelperError(str(exc)) from None
+        if data.get("status") == "error":
+            raise HelperError(data.get("error", "unknown error"))
+        return data
+
     proc = subprocess.run(["pkexec", HELPER_BIN] + args, capture_output=True, text=True, check=False)
     if proc.returncode in (126, 127):
         raise HelperError("Authentication was cancelled, or pkexec/splitvpn-helper is not installed.")
@@ -69,7 +97,7 @@ def connect(ovpn_path: Path, name: str, rules: dict,
                 fh.write(f"{username}\n{password or ''}\n")
             args += ["--auth-file", str(tmp_auth)]
 
-        return _pkexec(args)
+        return _invoke(args)
     finally:
         tmp_rules.unlink(missing_ok=True)
         if tmp_auth:
@@ -77,7 +105,7 @@ def connect(ovpn_path: Path, name: str, rules: dict,
 
 
 def disconnect(session: str) -> dict:
-    return _pkexec(["disconnect", "--session", session])
+    return _invoke(["disconnect", "--session", session])
 
 
 def run_app(session: str, command: list[str]) -> dict:
@@ -92,7 +120,7 @@ def run_app(session: str, command: list[str]) -> dict:
         if value:
             args += [flag, value]
     args += command
-    return _pkexec(args)
+    return _invoke(args)
 
 
 def list_sessions() -> list[dict]:

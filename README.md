@@ -2,9 +2,9 @@
 
 [Русская версия](README.ru.md)
 
-A desktop app for Arch Linux that lets you run OpenVPN **selectively** —
-instead of "everything goes through the VPN or nothing does", you choose
-exactly what uses the tunnel.
+A desktop app for Linux and Windows that lets you run OpenVPN
+**selectively** — instead of "everything goes through the VPN or nothing
+does", you choose exactly what uses the tunnel.
 
 ## Why would I want this?
 
@@ -49,6 +49,36 @@ makepkg -si
 
 That installs `splitvpn` in your application menu, plus the `splitvpn`
 and `splitvpn-helper` commands.
+
+## Installing (Windows)
+
+You'll need three things, none of which the installer bundles for you yet:
+
+1. **[OpenVPN for Windows](https://openvpn.net/community-downloads/)** —
+   Split VPN drives the real `openvpn.exe`, it doesn't reimplement the
+   protocol. Install it normally; Split VPN finds it on `PATH` or at its
+   default `C:\Program Files\OpenVPN\bin\openvpn.exe` location.
+2. **Python 3.10+** with **PyGObject** (the Python/GTK3 bindings). There's
+   no official PyGObject wheel on PyPI for Windows, so the straightforward
+   path is [MSYS2](https://www.msys2.org/): install it, then from an MSYS2
+   MinGW64 shell run
+   ```bash
+   pacman -S mingw-w64-x86_64-python-gobject mingw-w64-x86_64-gtk3 mingw-w64-x86_64-python-pip
+   ```
+   and use *that* `python.exe` (under `C:\msys64\mingw64\bin\`) for the
+   next step, not a regular python.org install.
+3. Split VPN itself:
+   ```bash
+   pip install split-vpn
+   ```
+   (or `pip install -e .` from a checked-out clone). This also pulls in
+   `pydivert` and `psutil`, which are Windows-only dependencies used for
+   split-by-application.
+
+Run `splitvpn` to start the GUI. The first **Connect** (and every
+**Launch**) triggers a normal Windows UAC prompt — that's how the app gets
+permission to change routes or manage the per-application packet filter;
+the GUI itself never runs elevated.
 
 ## Quick start
 
@@ -117,6 +147,8 @@ another language? Translation files live in
 *(You don't need any of this to use the app — it's here for anyone
 curious, packaging it, or contributing.)*
 
+On Linux:
+
 ```
 GUI (unprivileged, GTK3)  ──pkexec──▶  splitvpn-helper (root)
      reads /run/splitvpn/*/state.json     │
@@ -129,17 +161,40 @@ GUI (unprivileged, GTK3)  ──pkexec──▶  splitvpn-helper (root)
                                               to apply/tear down routes
 ```
 
+On Windows, the same shape with UAC standing in for `pkexec` and no
+`--daemon` (openvpn's own Windows daemonize call doesn't work reliably
+when launched without a normal console, so the helper detaches and
+manages the process itself instead):
+
+```
+GUI (unprivileged, GTK3)  ──UAC──▶  splitvpn-helper.exe (Administrator)
+     reads %PROGRAMDATA%\splitvpn\    │
+     run\*\state.json directly for   ├─ writes an augmented .ovpn
+     status, no elevation needed     ├─ launches openvpn.exe detached,
+     for polling                     │   manages its lifetime directly
+                                      ├─ (per-app mode) spawns a detached
+                                      │   _app-split-daemon process
+                                      └─ openvpn's --up/--down hooks
+                                         call back into the helper to
+                                         apply/tear down routes
+```
+
 - `splitvpn` — the GTK GUI. Runs as your normal user. Never touches the
   network directly.
-- `splitvpn-helper` — a root-only CLI, invoked via `pkexec`. This is the
-  only part of the program that runs privileged operations (`ip`,
-  `iptables`, `ip netns`, launching `openvpn`).
-- State for active sessions lives under `/run/splitvpn/<session>/`
-  (tmpfs, cleared on reboot) and is written world-readable so the GUI can
-  poll status/log without repeated authentication prompts. Only mutating
-  actions (connect/disconnect/launch-app) go through `pkexec`.
+- `splitvpn-helper` — the only part of the program that performs
+  privileged operations. On Linux it's a root-only CLI invoked via
+  `pkexec`; on Windows it's invoked through a UAC elevation prompt
+  (`ShellExecuteExW` + `runas`), one prompt per `connect`/`disconnect`/
+  `run-app` call, never left running as a standing privileged daemon.
+- State for active sessions lives under `/run/splitvpn/<session>/` on
+  Linux (tmpfs, cleared on reboot) or
+  `%PROGRAMDATA%\splitvpn\run\<session>\` on Windows, written
+  world/standard-user readable so the GUI can poll status/log without
+  repeated authentication prompts. Only mutating actions
+  (connect/disconnect/launch-app) require elevation.
 - Imported profiles (plus any cert/key files they reference by relative
-  path) are copied into `~/.config/splitvpn/profiles/<id>/`.
+  path) are copied into `~/.config/splitvpn/profiles/<id>/` (Linux) or
+  `%APPDATA%\splitvpn\profiles\<id>\` (Windows).
 
 ### Split by IP/subnet, technically
 
@@ -160,6 +215,28 @@ the system. Clicking "Launch" next to an app runs it inside the namespace
 as your own user (via `setpriv`, not root), inheriting `DISPLAY`/
 `WAYLAND_DISPLAY`/`XAUTHORITY`/`DBUS_SESSION_BUS_ADDRESS` so GUI apps keep
 working normally.
+
+### Split by IP/subnet on Windows, technically
+
+Same idea as Linux, different tools: openvpn is launched with
+`route-noexec` and the matching `pull-filter ignore` rules, and the
+`--up`/`--down` hooks call PowerShell's `New-NetRoute`/`Remove-NetRoute`
+cmdlets instead of `ip route`.
+
+### Split by application on Windows, technically
+
+Windows has no equivalent of network namespaces, so this works
+differently here: a [WinDivert](https://reqrypt.org/windivert.html)-based
+packet filter (via the `pydivert` bindings) runs in a small detached
+background process for the life of the session (spawned by the `--up`
+hook, killed on disconnect). It watches process creation to learn which
+PIDs belong to apps you've launched (including their children), then
+NATs their outbound packets to the tunnel's own address and forces them
+out the tunnel interface, un-NATing replies back — everything else on the
+system is left completely alone. Clicking "Launch" starts the app
+de-elevated (as your normal desktop session, not as Administrator) by
+duplicating `explorer.exe`'s own token, the Windows equivalent of what
+`setpriv` does on Linux.
 
 ### Manual / dev install (without packaging)
 
@@ -188,10 +265,19 @@ system GTK).
   stale `/run/splitvpn/<session>/` by hand if needed.
 - Assumes a routed (`dev tun`, not `dev tap`) OpenVPN client config, which
   covers the overwhelming majority of provider-supplied `.ovpn` files.
+- **Windows**: split-by-application needs a second, detached background
+  process per session (there's no kernel-resident equivalent of network
+  namespaces to fall back on) — it's spawned and torn down automatically,
+  but it means the feature depends on that process staying alive for the
+  session's duration rather than being independent of any running code
+  the way Linux's netns approach is.
+- **Windows**: no packaged installer yet (MSI/winget) — install via `pip`
+  as described above, which currently also means no official PyGObject
+  wheel and a dependency on MSYS2's Python/GTK3 build.
 
 ## Testing notes
 
-This has been built and exercised end to end on a real Arch Linux system
+**Linux**: built and exercised end to end on a real Arch Linux system
 (WSL2) — package built with `makepkg`, installed, and run against a local
 OpenVPN test server for both split-by-subnet modes and split-by-
 application (netns) mode, including real traffic crossing the tunnel,
@@ -202,10 +288,29 @@ the test environment had no display server for live mouse interaction.
 Several real bugs turned up during that testing and were fixed (see the
 git log).
 
-What's **not** yet been exercised: a real TLS/certificate-based provider
-`.ovpn` (only a static-key config was used as the test target), live
-mouse-driven usage of the GUI, and bare-metal Arch (WSL2's kernel/
-networking is close to but not identical to bare metal).
+**Windows**: exercised end to end on a real Windows 10 machine against a
+local static-key OpenVPN test server — `connect` → routes applied →
+`disconnect` → routes restored, for split-by-subnet; and for
+split-by-application, `connect` → the `_app-split-daemon` process starts
+→ `run-app` launches a real process de-elevated (confirmed at Medium
+integrity, not Administrator) and it gets picked up for tracking →
+`disconnect` cleanly kills both the daemon and openvpn. Several
+Windows-specific bugs turned up and were fixed this way, including
+openvpn's `--daemon` failing outright in this environment (the helper now
+detaches the process itself instead), the `--up`/`--down` script value
+needing to be one bare script path rather than a command-with-arguments
+string (Windows hands it straight to `CreateProcess`, unlike Linux's
+`execve`), and openvpn's script environment having too restrictive a
+`PATH` to find `powershell.exe` by name.
+
+What's **not** yet been exercised on either platform: a real
+TLS/certificate-based provider `.ovpn` (only a static-key config was used
+as the test target), live mouse-driven usage of the GUI, and (Linux)
+bare-metal Arch specifically (WSL2's kernel/networking is close to but not
+identical to bare metal). On Windows specifically, split-by-application
+has been verified mechanically (the WinDivert driver loads, PID tracking
+and de-elevation work) but not against real cross-tunnel traffic from a
+remote OpenVPN server end to end.
 
 ### Checklist before you trust it with real traffic
 
@@ -230,15 +335,47 @@ networking is close to but not identical to bare metal).
       "connecting" forever, and that `splitvpn-helper disconnect` still
       cleans up leftover routes/namespaces.
 
+The Windows equivalent, using `Get-NetRoute`/Task Manager in place of
+`ip route`/`kill`:
+
+- [ ] Import a real `.ovpn`, confirm **Full tunnel** connects and your
+      public IP changes.
+- [ ] **Split by IP/subnet → include only**, one test CIDR, connect, and
+      confirm `Get-NetRoute -DestinationPrefix <cidr>` shows it via the
+      TAP/wintun interface while your normal default route is untouched.
+- [ ] **exclude listed subnets** with your LAN CIDR: confirm LAN devices
+      stay reachable while general traffic goes through the VPN.
+- [ ] **Split by application**: add an app, connect, click Launch, and
+      confirm that app's traffic (only) exits via the VPN.
+- [ ] Disconnect and confirm the route is gone (`Get-NetRoute`) and both
+      `openvpn.exe` and the app-split background process (if used) are
+      gone from Task Manager.
+- [ ] End `openvpn.exe` externally while connected and confirm the GUI
+      notices instead of hanging on "connecting" forever, and that
+      **Disconnect** still cleans up leftover routes.
+
 ## Security notes
 
-- `splitvpn-helper` is the only component that runs as root, and only for
-  the duration of each `connect`/`disconnect`/`run-app` call — it's
-  invoked fresh via `pkexec` each time, never left running as a
-  standing privileged daemon.
+- `splitvpn-helper` is the only component that performs privileged
+  operations, and only for the duration of each
+  `connect`/`disconnect`/`run-app` call — invoked fresh each time (via
+  `pkexec` on Linux, a UAC prompt on Windows), never left running as a
+  standing privileged daemon. On Windows, the one exception is the
+  per-session `_app-split-daemon` process for split-by-application, which
+  does need to persist for the session's duration to host the packet
+  filter — it's killed on disconnect, same as openvpn itself.
 - Credentials typed into the "VPN credentials" dialog are written to a
-  `0600` temp file, copied by the root helper into the session directory,
-  and never touch the GUI process's own long-lived storage.
+  private temp file (`0600` on Linux; on Windows, a fresh file under
+  `%PROGRAMDATA%\splitvpn\run\<session>\`, which inherits ACLs that don't
+  grant other standard users access), copied by the privileged helper
+  into the session directory, and never touch the GUI process's own
+  long-lived storage.
 - All subprocess calls use argument lists (never `shell=True`), and
   CIDRs are validated with Python's `ipaddress` module before being
-  handed to `ip route`.
+  handed to `ip route` / `New-NetRoute`.
+- On Windows, "Launch" runs the target app de-elevated (Medium integrity,
+  the same as anything else in your desktop session) rather than
+  inheriting the helper's own Administrator token, by duplicating
+  `explorer.exe`'s token — the same principle as `setpriv` dropping to
+  your user on Linux, just implemented against a different privilege
+  model.
