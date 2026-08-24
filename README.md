@@ -58,27 +58,33 @@ You'll need three things, none of which the installer bundles for you yet:
    Split VPN drives the real `openvpn.exe`, it doesn't reimplement the
    protocol. Install it normally; Split VPN finds it on `PATH` or at its
    default `C:\Program Files\OpenVPN\bin\openvpn.exe` location.
-2. **Python 3.10+** with **PyGObject** (the Python/GTK3 bindings). There's
-   no official PyGObject wheel on PyPI for Windows, so the straightforward
-   path is [MSYS2](https://www.msys2.org/): install it, then from an MSYS2
-   MinGW64 shell run
+2. **Python 3.10+** with **PyGObject** (the Python/GTK3 bindings). A
+   regular python.org install won't work here — there's no official
+   PyGObject wheel on PyPI for Windows, and building one yourself needs
+   GTK3 and a compiler toolchain. The practical route is
+   [MSYS2](https://www.msys2.org/), which is its own separate environment
+   with its own package manager, `pacman` — **not** something you run in
+   a normal cmd/PowerShell window, it only exists inside MSYS2. Install
+   MSYS2, then open the **"MSYS2 MinGW64"** shortcut from its Start Menu
+   entry (a distinct terminal window, not PowerShell) and run:
    ```bash
    pacman -S mingw-w64-x86_64-python-gobject mingw-w64-x86_64-gtk3 mingw-w64-x86_64-python-pip
    ```
-   and use *that* `python.exe` (under `C:\msys64\mingw64\bin\`) for the
-   next step, not a regular python.org install.
-3. Split VPN itself:
+3. Split VPN itself — **in that same MSYS2 MinGW64 window**, with that
+   same `pip`:
    ```bash
    pip install split-vpn
    ```
    (or `pip install -e .` from a checked-out clone). This also pulls in
    `pydivert` and `psutil`, which are Windows-only dependencies used for
-   split-by-application.
+   split-by-application. Keep running `splitvpn` from that same MSYS2
+   terminal too (or add `C:\msys64\mingw64\bin` to `PATH`) — a regular
+   python.org install won't see anything installed this way.
 
-Run `splitvpn` to start the GUI. The first **Connect** (and every
-**Launch**) triggers a normal Windows UAC prompt — that's how the app gets
-permission to change routes or manage the per-application packet filter;
-the GUI itself never runs elevated.
+The first **Connect** (and every **Launch**) triggers a normal Windows
+UAC prompt — that's how the app gets permission to change routes or
+manage the per-application packet filter; the GUI itself never runs
+elevated.
 
 ## Quick start
 
